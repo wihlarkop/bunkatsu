@@ -36,7 +36,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
       
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --lib --verbose
 
   # Python tests
   python:
@@ -49,23 +49,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
       - name: Install uv
         uses: astral-sh/setup-uv@v4
       
-      - name: Install dependencies
-        run: |
-          uv pip install --system maturin pytest
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
       
-      - name: Build and install
-        run: maturin develop
+      - name: Create venv and install
+        run: |
+          uv venv --python ${{ matrix.python-version }}
+          source .venv/bin/activate
+          uv pip install maturin pytest
+          maturin develop
       
       - name: Run Python tests
-        run: pytest tests/ -v
+        run: |
+          source .venv/bin/activate
+          pytest tests/ -v
+
