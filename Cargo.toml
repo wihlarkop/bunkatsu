@@ -1,0 +1,25 @@
+[package]
+name = "bunkatsu"
+version = "0.1.0"
+edition = "2021"
+description = "Universal high-performance text chunking library"
+license = "MIT"
+repository = "https://github.com/wihlarkop/bunkatsu"
+
+[lib]
+name = "bunkatsu"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.27.2", features = ["extension-module"] }
+thiserror = "2.0.17"
+unicode-segmentation = "1.12"
+regex = "1.12.2"
+uuid = { version = "1.19.0", features = ["v4"] }
+
+[dev-dependencies]
+criterion = "0.8.1"
+
+[profile.release]
+lto = true
+codegen-units = 1

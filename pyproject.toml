@@ -1,0 +1,24 @@
+[build-system]
+requires = ["maturin>=1.10,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "bunkatsu"
+version = "0.1.0"
+description = "Universal high-performance text chunking library"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Text Processing",
+    "Development Status :: 3 - Alpha",
+]
+keywords = ["chunking", "text", "nlp", "rag", "rust"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
+module-name = "bunkatsu._bunkatsu"
