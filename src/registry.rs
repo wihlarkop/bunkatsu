@@ -1,7 +1,9 @@
 //! Algorithm registry for managing chunking strategies.
 
 use crate::algorithms::{
-    FixedSizeChunker, ParagraphChunker, SentenceChunker, SlidingWindowChunker,
+    CodeChunker, CsvChunker, FixedSizeChunker, HeadingChunker, HierarchicalChunker, HtmlChunker,
+    HybridChunker, JsonChunker, LatexChunker, MarkdownChunker, ParagraphChunker, RecursiveChunker,
+    SentenceChunker, SlidingWindowChunker, TokenChunker,
 };
 use crate::traits::ChunkAlgorithm;
 use std::collections::HashMap;
@@ -19,34 +21,39 @@ impl Default for AlgorithmRegistry {
 }
 
 impl AlgorithmRegistry {
-    /// Create a new registry with built-in algorithms.
     pub fn new() -> Self {
-        let mut registry = Self {
-            algorithms: HashMap::new(),
-        };
+        let mut registry = Self { algorithms: HashMap::new() };
 
-        // Register built-in algorithms
         registry.register(Arc::new(FixedSizeChunker));
         registry.register(Arc::new(SlidingWindowChunker));
         registry.register(Arc::new(SentenceChunker));
         registry.register(Arc::new(ParagraphChunker));
+        registry.register(Arc::new(MarkdownChunker));
+        registry.register(Arc::new(HeadingChunker::default()));
+        registry.register(Arc::new(RecursiveChunker::default()));
+        registry.register(Arc::new(TokenChunker));
+        registry.register(Arc::new(HtmlChunker));
+        registry.register(Arc::new(JsonChunker));
+        registry.register(Arc::new(CsvChunker));
+        registry.register(Arc::new(LatexChunker));
+        registry.register(Arc::new(CodeChunker));
+        registry.register(Arc::new(HierarchicalChunker));
+        registry.register(Arc::new(HybridChunker));
 
         registry
     }
 
-    /// Register a new algorithm.
     pub fn register(&mut self, algorithm: Arc<dyn ChunkAlgorithm>) {
-        self.algorithms
-            .insert(algorithm.name().to_string(), algorithm);
+        self.algorithms.insert(algorithm.name().to_string(), algorithm);
     }
 
-    /// Get an algorithm by name.
     pub fn get(&self, name: &str) -> Option<Arc<dyn ChunkAlgorithm>> {
         self.algorithms.get(name).cloned()
     }
 
-    /// List all registered algorithm names.
     pub fn list(&self) -> Vec<String> {
-        self.algorithms.keys().cloned().collect()
+        let mut names: Vec<String> = self.algorithms.keys().cloned().collect();
+        names.sort();
+        names
     }
 }

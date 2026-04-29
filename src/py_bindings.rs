@@ -11,6 +11,7 @@ use crate::algorithms::{
 use crate::chunk::Chunk;
 use crate::config::{ChunkConfig, CodeLanguage, SentenceDetector};
 use crate::embedding::{PyEmbeddingProvider, PyTextGenerator};
+use crate::registry::AlgorithmRegistry;
 use crate::traits::ChunkAlgorithm;
 
 /// Main chunker class for Python.
@@ -31,6 +32,7 @@ pub struct Chunker {
     code: CodeChunker,
     hierarchical: HierarchicalChunker,
     hybrid: HybridChunker,
+    registry: AlgorithmRegistry,
 }
 
 #[pymethods]
@@ -53,6 +55,7 @@ impl Chunker {
             code: CodeChunker,
             hierarchical: HierarchicalChunker,
             hybrid: HybridChunker,
+            registry: AlgorithmRegistry::new(),
         }
     }
 
@@ -208,6 +211,16 @@ impl Chunker {
     ) -> Vec<EmbeddedChunk> {
         let embedder = PyEmbeddingProvider::new(embedding_fn);
         LateChunker.chunk_with_embedder(py, text, max_size, &embedder)
+    }
+
+    /// Chunk text using a named algorithm from the registry.
+    #[pyo3(signature = (text, method, max_size=512))]
+    pub fn chunk_by_name(&self, text: &str, method: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        match self.registry.get(method) {
+            Some(algo) => algo.chunk(text, &config),
+            None => Vec::new(),
+        }
     }
 
     pub fn available_methods(&self) -> Vec<String> {
