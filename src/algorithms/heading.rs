@@ -5,7 +5,11 @@
 use crate::chunk::{Chunk, ChunkMetadata};
 use crate::config::ChunkConfig;
 use crate::traits::ChunkAlgorithm;
-use regex::Regex;
+use std::sync::LazyLock;
+
+static HEADING_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap()
+});
 
 /// A parsed heading with its content.
 #[derive(Debug)]
@@ -44,7 +48,6 @@ impl HeadingChunker {
 
     /// Parse text into sections based on headings.
     fn parse_sections(&self, text: &str) -> Vec<HeadingSection> {
-        let heading_re = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
         let mut sections = Vec::new();
         let mut current_section: Option<HeadingSection> = None;
         let mut current_pos = 0;
@@ -53,7 +56,7 @@ impl HeadingChunker {
             let line_start = current_pos;
             let line_end = current_pos + line.len();
 
-            if let Some(caps) = heading_re.captures(line) {
+            if let Some(caps) = HEADING_RE.captures(line) {
                 let level = caps.get(1).map(|m| m.as_str().len()).unwrap_or(1);
                 let title = caps.get(2).map(|m| m.as_str()).unwrap_or("").to_string();
 

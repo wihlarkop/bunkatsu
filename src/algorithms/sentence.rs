@@ -3,8 +3,12 @@
 use crate::chunk::{Chunk, ChunkMetadata};
 use crate::config::{ChunkConfig, SentenceDetector};
 use crate::traits::ChunkAlgorithm;
-use regex::Regex;
+use std::sync::LazyLock;
 use unicode_segmentation::UnicodeSegmentation;
+
+static SENTENCE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"[.!?]+[\s]+|[.!?]+$").unwrap()
+});
 
 /// Sentence-based chunker with configurable detection method.
 pub struct SentenceChunker;
@@ -12,13 +16,10 @@ pub struct SentenceChunker;
 impl SentenceChunker {
     /// Split text into sentences using regex (fast, basic).
     fn split_regex(text: &str) -> Vec<(usize, usize, &str)> {
-        // Match sentence-ending punctuation followed by whitespace or end of string
-        let re = Regex::new(r"[.!?]+[\s]+|[.!?]+$").unwrap();
-
         let mut sentences = Vec::new();
         let mut last_end = 0;
 
-        for mat in re.find_iter(text) {
+        for mat in SENTENCE_RE.find_iter(text) {
             let sentence_end = mat.end();
             let sentence = &text[last_end..sentence_end];
             if !sentence.trim().is_empty() {

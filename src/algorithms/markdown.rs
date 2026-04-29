@@ -8,7 +8,14 @@
 use crate::chunk::{Chunk, ChunkMetadata};
 use crate::config::ChunkConfig;
 use crate::traits::ChunkAlgorithm;
-use regex::Regex;
+use std::sync::LazyLock;
+
+static CODE_FENCE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^(`{3,}|~{3,})(\w*)\s*$").unwrap()
+});
+static MD_HEADING_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap()
+});
 
 /// Represents a parsed markdown block.
 #[derive(Debug, Clone)]
@@ -52,14 +59,11 @@ impl MarkdownChunker {
         let mut pending_text_start: Option<usize> = None;
         let mut pending_text = String::new();
 
-        let code_fence_re = Regex::new(r"^(`{3,}|~{3,})(\w*)\s*$").unwrap();
-        let heading_re = Regex::new(r"^(#{1,6})\s+(.+)$").unwrap();
-
         for line in text.lines() {
             let line_start = current_pos;
             let line_end = current_pos + line.len();
 
-            if let Some(caps) = code_fence_re.captures(line) {
+            if let Some(caps) = CODE_FENCE_RE.captures(line) {
                 if !in_code_block {
                     // Start of code block - flush pending text first
                     if !pending_text.is_empty() {
@@ -91,7 +95,7 @@ impl MarkdownChunker {
                 }
             } else if in_code_block {
                 // Inside code block, continue
-            } else if let Some(caps) = heading_re.captures(line) {
+            } else if let Some(caps) = MD_HEADING_RE.captures(line) {
                 // Flush pending text
                 if !pending_text.is_empty() {
                     blocks.push(MarkdownBlock::Text {
