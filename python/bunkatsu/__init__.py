@@ -1,17 +1,26 @@
 """
 Bunkatsu (分割) - Universal High-Performance Text Chunking Library
 
-A Rust-core, Python-first text chunking library designed for RAG, NLP, 
+A Rust-core, Python-first text chunking library designed for RAG, NLP,
 and Document AI systems.
 """
 
-from bunkatsu._bunkatsu import Chunk, ChunkMetadata, Chunker, SentenceDetector
+from bunkatsu._bunkatsu import (
+    Chunk,
+    Chunker,
+    ChunkMetadata,
+    CodeLanguage,
+    EmbeddedChunk,
+    SentenceDetector,
+)
 
 __all__ = [
-    "Chunker",
-    "Chunk", 
+    "Chunk",
     "ChunkMetadata",
+    "Chunker",
+    "CodeLanguage",
+    "EmbeddedChunk",
     "SentenceDetector",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
