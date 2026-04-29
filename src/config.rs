@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 
 /// Sentence detection method.
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SentenceDetector {
     /// Fast regex-based detection (handles common cases: . ! ?)
@@ -14,7 +14,7 @@ pub enum SentenceDetector {
 }
 
 /// Programming language hint for code-aware chunking.
-#[pyclass(eq, eq_int)]
+#[pyclass(eq, eq_int, from_py_object)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CodeLanguage {
     #[default]

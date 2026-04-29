@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 
 /// Metadata associated with a chunk.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone, Default)]
 pub struct ChunkMetadata {
     /// The chunking method used.
@@ -92,7 +92,7 @@ impl ChunkMetadata {
 }
 
 /// A text chunk with position and metadata.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct Chunk {
     /// Unique identifier for this chunk.
