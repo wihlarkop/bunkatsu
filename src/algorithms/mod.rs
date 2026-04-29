@@ -15,6 +15,10 @@ pub mod latex;
 pub mod code;
 pub mod hierarchical;
 pub mod hybrid;
+pub mod semantic;
+pub mod kamradt;
+pub mod proposition;
+pub mod late_chunking;
 
 pub use fixed_size::FixedSizeChunker;
 pub use heading::HeadingChunker;
@@ -31,3 +35,7 @@ pub use latex::LatexChunker;
 pub use code::CodeChunker;
 pub use hierarchical::HierarchicalChunker;
 pub use hybrid::HybridChunker;
+pub use semantic::{SemanticChunker, cosine_similarity};
+pub use kamradt::KamradtChunker;
+pub use proposition::PropositionChunker;
+pub use late_chunking::{EmbeddedChunk, LateChunker};

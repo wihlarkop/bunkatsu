@@ -3,12 +3,14 @@
 use pyo3::prelude::*;
 
 use crate::algorithms::{
-    CsvChunker, CodeChunker, FixedSizeChunker, HeadingChunker, HierarchicalChunker, HtmlChunker,
-    HybridChunker, JsonChunker, LatexChunker, MarkdownChunker, ParagraphChunker, RecursiveChunker,
+    CsvChunker, CodeChunker, EmbeddedChunk, FixedSizeChunker, HeadingChunker, HierarchicalChunker,
+    HtmlChunker, HybridChunker, JsonChunker, KamradtChunker, LatexChunker, LateChunker,
+    MarkdownChunker, ParagraphChunker, PropositionChunker, RecursiveChunker, SemanticChunker,
     SentenceChunker, SlidingWindowChunker, TokenChunker,
 };
 use crate::chunk::Chunk;
 use crate::config::{ChunkConfig, CodeLanguage, SentenceDetector};
+use crate::embedding::{PyEmbeddingProvider, PyTextGenerator};
 use crate::traits::ChunkAlgorithm;
 
 /// Main chunker class for Python.
@@ -159,6 +161,55 @@ impl Chunker {
         self.hybrid.chunk(text, &config)
     }
 
+    #[pyo3(signature = (text, embedding_fn, threshold=0.5))]
+    pub fn chunk_semantic(
+        &self,
+        text: &str,
+        embedding_fn: Py<PyAny>,
+        threshold: f32,
+        py: Python<'_>,
+    ) -> Vec<Chunk> {
+        let embedder = PyEmbeddingProvider::new(embedding_fn);
+        let chunker = SemanticChunker::new(threshold);
+        chunker.chunk_with_embedder(py, text, &embedder)
+    }
+
+    #[pyo3(signature = (text, embedding_fn, percentile=95.0))]
+    pub fn chunk_kamradt(
+        &self,
+        text: &str,
+        embedding_fn: Py<PyAny>,
+        percentile: f32,
+        py: Python<'_>,
+    ) -> Vec<Chunk> {
+        let embedder = PyEmbeddingProvider::new(embedding_fn);
+        let chunker = KamradtChunker::new(percentile);
+        chunker.chunk_with_embedder(py, text, &embedder)
+    }
+
+    #[pyo3(signature = (text, llm_fn))]
+    pub fn chunk_proposition(
+        &self,
+        text: &str,
+        llm_fn: Py<PyAny>,
+        py: Python<'_>,
+    ) -> Vec<Chunk> {
+        let generator = PyTextGenerator::new(llm_fn);
+        PropositionChunker.chunk_with_generator(py, text, &generator)
+    }
+
+    #[pyo3(signature = (text, embedding_fn, max_size=512))]
+    pub fn chunk_late(
+        &self,
+        text: &str,
+        embedding_fn: Py<PyAny>,
+        max_size: usize,
+        py: Python<'_>,
+    ) -> Vec<EmbeddedChunk> {
+        let embedder = PyEmbeddingProvider::new(embedding_fn);
+        LateChunker.chunk_with_embedder(py, text, max_size, &embedder)
+    }
+
     pub fn available_methods(&self) -> Vec<String> {
         vec![
             "fixed_size".to_string(),
@@ -176,6 +227,10 @@ impl Chunker {
             "code".to_string(),
             "hierarchical".to_string(),
             "hybrid".to_string(),
+            "semantic".to_string(),
+            "kamradt".to_string(),
+            "proposition".to_string(),
+            "late_chunking".to_string(),
         ]
     }
 }

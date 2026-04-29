@@ -22,8 +22,8 @@ pub mod traits;
 
 // Re-exports
 pub use algorithms::{
-    FixedSizeChunker, HeadingChunker, MarkdownChunker, ParagraphChunker, RecursiveChunker,
-    RecursiveStrategy, SentenceChunker, SlidingWindowChunker,
+    EmbeddedChunk, FixedSizeChunker, HeadingChunker, MarkdownChunker, ParagraphChunker,
+    RecursiveChunker, RecursiveStrategy, SentenceChunker, SlidingWindowChunker,
 };
 pub use chunk::{Chunk, ChunkMetadata};
 pub use config::{ChunkConfig, CodeLanguage, SentenceDetector};
@@ -40,5 +40,6 @@ fn _bunkatsu(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ChunkMetadata>()?;
     m.add_class::<SentenceDetector>()?;
     m.add_class::<CodeLanguage>()?;
+    m.add_class::<EmbeddedChunk>()?;
     Ok(())
 }
