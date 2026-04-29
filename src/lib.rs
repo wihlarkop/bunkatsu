@@ -14,6 +14,7 @@ use pyo3::prelude::*;
 pub mod algorithms;
 pub mod chunk;
 pub mod config;
+pub mod embedding;
 pub mod error;
 pub mod py_bindings;
 pub mod registry;
