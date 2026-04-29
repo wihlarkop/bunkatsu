@@ -25,7 +25,7 @@ pub use algorithms::{
     RecursiveStrategy, SentenceChunker, SlidingWindowChunker,
 };
 pub use chunk::{Chunk, ChunkMetadata};
-pub use config::{ChunkConfig, SentenceDetector};
+pub use config::{ChunkConfig, CodeLanguage, SentenceDetector};
 pub use error::ChunkError;
 pub use py_bindings::Chunker;
 pub use registry::AlgorithmRegistry;
@@ -38,5 +38,6 @@ fn _bunkatsu(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Chunk>()?;
     m.add_class::<ChunkMetadata>()?;
     m.add_class::<SentenceDetector>()?;
+    m.add_class::<CodeLanguage>()?;
     Ok(())
 }
