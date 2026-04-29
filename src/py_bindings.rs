@@ -3,11 +3,12 @@
 use pyo3::prelude::*;
 
 use crate::algorithms::{
-    FixedSizeChunker, HeadingChunker, MarkdownChunker, ParagraphChunker, RecursiveChunker,
-    SentenceChunker, SlidingWindowChunker,
+    CsvChunker, CodeChunker, FixedSizeChunker, HeadingChunker, HierarchicalChunker, HtmlChunker,
+    HybridChunker, JsonChunker, LatexChunker, MarkdownChunker, ParagraphChunker, RecursiveChunker,
+    SentenceChunker, SlidingWindowChunker, TokenChunker,
 };
 use crate::chunk::Chunk;
-use crate::config::{ChunkConfig, SentenceDetector};
+use crate::config::{ChunkConfig, CodeLanguage, SentenceDetector};
 use crate::traits::ChunkAlgorithm;
 
 /// Main chunker class for Python.
@@ -20,11 +21,18 @@ pub struct Chunker {
     markdown: MarkdownChunker,
     heading: HeadingChunker,
     recursive: RecursiveChunker,
+    token: TokenChunker,
+    html: HtmlChunker,
+    json: JsonChunker,
+    csv: CsvChunker,
+    latex: LatexChunker,
+    code: CodeChunker,
+    hierarchical: HierarchicalChunker,
+    hybrid: HybridChunker,
 }
 
 #[pymethods]
 impl Chunker {
-    /// Create a new Chunker instance.
     #[new]
     pub fn new() -> Self {
         Self {
@@ -35,24 +43,29 @@ impl Chunker {
             markdown: MarkdownChunker,
             heading: HeadingChunker::default(),
             recursive: RecursiveChunker::default(),
+            token: TokenChunker,
+            html: HtmlChunker,
+            json: JsonChunker,
+            csv: CsvChunker,
+            latex: LatexChunker,
+            code: CodeChunker,
+            hierarchical: HierarchicalChunker,
+            hybrid: HybridChunker,
         }
     }
 
-    /// Chunk text using fixed-size character-based chunking.
     #[pyo3(signature = (text, max_size=512))]
     pub fn chunk_fixed(&self, text: &str, max_size: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size);
         self.fixed_size.chunk(text, &config)
     }
 
-    /// Chunk text using sliding window with overlap.
     #[pyo3(signature = (text, max_size=512, overlap=64))]
     pub fn chunk_sliding(&self, text: &str, max_size: usize, overlap: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size).with_overlap(overlap);
         self.sliding_window.chunk(text, &config)
     }
 
-    /// Chunk text by sentence boundaries.
     #[pyo3(signature = (text, max_size=512, detector=SentenceDetector::Regex))]
     pub fn chunk_sentences(
         &self,
@@ -64,35 +77,88 @@ impl Chunker {
         self.sentence.chunk(text, &config)
     }
 
-    /// Chunk text by paragraph boundaries.
     #[pyo3(signature = (text, max_size=512))]
     pub fn chunk_paragraphs(&self, text: &str, max_size: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size);
         self.paragraph.chunk(text, &config)
     }
 
-    /// Chunk markdown text preserving code blocks and splitting at headings.
     #[pyo3(signature = (text, max_size=1000))]
     pub fn chunk_markdown(&self, text: &str, max_size: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size);
         self.markdown.chunk(text, &config)
     }
 
-    /// Chunk text by heading boundaries.
     #[pyo3(signature = (text, max_size=1000))]
     pub fn chunk_headings(&self, text: &str, max_size: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size);
         self.heading.chunk(text, &config)
     }
 
-    /// Chunk text recursively using multiple strategies.
     #[pyo3(signature = (text, max_size=512))]
     pub fn chunk_recursive(&self, text: &str, max_size: usize) -> Vec<Chunk> {
         let config = ChunkConfig::new(max_size);
         self.recursive.chunk(text, &config)
     }
 
-    /// List available chunking methods.
+    #[pyo3(signature = (text, tokenizer_fn, max_tokens=512))]
+    pub fn chunk_tokens(
+        &self,
+        text: &str,
+        tokenizer_fn: Py<PyAny>,
+        max_tokens: usize,
+        py: Python<'_>,
+    ) -> Vec<Chunk> {
+        self.token.chunk_with_tokenizer(text, max_tokens, |s| {
+            tokenizer_fn
+                .call1(py, (s,))
+                .and_then(|r| r.extract::<usize>(py))
+                .unwrap_or_else(|_| s.split_whitespace().count())
+        })
+    }
+
+    #[pyo3(signature = (text, max_size=1000))]
+    pub fn chunk_html(&self, text: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        self.html.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, max_size=1000))]
+    pub fn chunk_json(&self, text: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        self.json.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, rows_per_chunk=50))]
+    pub fn chunk_csv(&self, text: &str, rows_per_chunk: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(usize::MAX).with_rows_per_chunk(rows_per_chunk);
+        self.csv.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, max_size=1000))]
+    pub fn chunk_latex(&self, text: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        self.latex.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, max_size=1000, language=CodeLanguage::Auto))]
+    pub fn chunk_code(&self, text: &str, max_size: usize, language: CodeLanguage) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size).with_code_language(language);
+        self.code.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, max_size=512))]
+    pub fn chunk_hierarchical(&self, text: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        self.hierarchical.chunk(text, &config)
+    }
+
+    #[pyo3(signature = (text, max_size=512))]
+    pub fn chunk_hybrid(&self, text: &str, max_size: usize) -> Vec<Chunk> {
+        let config = ChunkConfig::new(max_size);
+        self.hybrid.chunk(text, &config)
+    }
+
     pub fn available_methods(&self) -> Vec<String> {
         vec![
             "fixed_size".to_string(),
@@ -102,6 +168,14 @@ impl Chunker {
             "markdown".to_string(),
             "heading".to_string(),
             "recursive".to_string(),
+            "token".to_string(),
+            "html".to_string(),
+            "json".to_string(),
+            "csv".to_string(),
+            "latex".to_string(),
+            "code".to_string(),
+            "hierarchical".to_string(),
+            "hybrid".to_string(),
         ]
     }
 }
