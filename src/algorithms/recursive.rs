@@ -90,10 +90,14 @@ impl RecursiveChunker {
 
         for chunk in initial_chunks {
             if chunk.text.len() > config.max_size {
-                // Need to split further
+                let parent_start = chunk.start;
                 let parent_chunk_id = chunk.id.clone();
-                let sub_chunks =
+                let mut sub_chunks =
                     self.chunk_recursive(&chunk.text, config, Some(parent_chunk_id), level + 1);
+                for sub in &mut sub_chunks {
+                    sub.start += parent_start;
+                    sub.end += parent_start;
+                }
                 result.extend(sub_chunks);
             } else {
                 // Chunk fits, add with proper metadata
@@ -169,6 +173,21 @@ mod tests {
         let chunks = chunker.chunk("", &config);
 
         assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_recursive_positions_in_original_doc() {
+        let chunker = RecursiveChunker::default();
+        // max_size=10 forces each paragraph to be further split (both paragraphs are >10 chars)
+        let config = ChunkConfig::new(10);
+        // "Second paragraph here." starts at byte 23 in this string
+        let text = "First paragraph here.\n\nSecond paragraph here.";
+        let chunks = chunker.chunk(text, &config);
+
+        assert!(chunks.len() >= 2);
+        // At least one chunk must start at or after byte 23 (second paragraph offset)
+        let has_correct_offset = chunks.iter().any(|c| c.start >= 23);
+        assert!(has_correct_offset, "No chunk reflects second paragraph offset (23+); positions not offset into original doc");
     }
 
     #[test]
