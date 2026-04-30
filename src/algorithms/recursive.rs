@@ -120,7 +120,36 @@ impl RecursiveChunker {
 
 impl ChunkAlgorithm for RecursiveChunker {
     fn chunk(&self, text: &str, config: &ChunkConfig) -> Vec<Chunk> {
-        self.chunk_recursive(text, config, None, 0)
+        let mut chunks = self.chunk_recursive(text, config, None, 0);
+
+        if config.overlap == 0 || chunks.len() <= 1 {
+            return chunks;
+        }
+
+        // Post-processing: prepend the tail of each preceding chunk as overlap.
+        // We clone the original texts first so mutations don't affect the source.
+        let original_texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
+
+        for i in 1..chunks.len() {
+            let prev = &original_texts[i - 1];
+            // Take the last `overlap` bytes, snapping back to a char boundary.
+            let overlap = config.overlap.min(prev.len());
+            let snap = prev.len() - overlap;
+            let snap = prev
+                .char_indices()
+                .map(|(b, _)| b)
+                .filter(|&b| b >= snap)
+                .next()
+                .unwrap_or(prev.len());
+            let overlap_text = &prev[snap..];
+            let actual_overlap = overlap_text.len();
+
+            chunks[i].text = format!("{} {}", overlap_text, chunks[i].text);
+            chunks[i].start = chunks[i].start.saturating_sub(actual_overlap + 1);
+            chunks[i].metadata.overlap_chars = Some(actual_overlap);
+        }
+
+        chunks
     }
 
     fn name(&self) -> &str {
@@ -187,7 +216,10 @@ mod tests {
         assert!(chunks.len() >= 2);
         // At least one chunk must start at or after byte 23 (second paragraph offset)
         let has_correct_offset = chunks.iter().any(|c| c.start >= 23);
-        assert!(has_correct_offset, "No chunk reflects second paragraph offset (23+); positions not offset into original doc");
+        assert!(
+            has_correct_offset,
+            "No chunk reflects second paragraph offset (23+); positions not offset into original doc"
+        );
     }
 
     #[test]
@@ -197,7 +229,31 @@ mod tests {
         let text = "Para one.\n\nPara two which is a bit longer.";
         let chunks = chunker.chunk(text, &config);
 
-        // Check that method contains level info
         assert!(chunks[0].metadata.method.starts_with("recursive_l"));
+    }
+
+    #[test]
+    fn test_recursive_overlap_applied() {
+        let chunker = RecursiveChunker::default();
+        let config = ChunkConfig::new(30).with_overlap(10);
+        let text = "First paragraph here.\n\nSecond paragraph here.\n\nThird paragraph here.";
+        let chunks = chunker.chunk(text, &config);
+
+        assert!(chunks.len() >= 2);
+        // All chunks after the first should have overlap metadata
+        for chunk in chunks.iter().skip(1) {
+            assert!(chunk.metadata.overlap_chars.is_some());
+        }
+    }
+
+    #[test]
+    fn test_recursive_overlap_zero_unchanged() {
+        let chunker = RecursiveChunker::default();
+        let config = ChunkConfig::new(30);
+        let text = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.";
+        let chunks = chunker.chunk(text, &config);
+        for chunk in &chunks {
+            assert_eq!(chunk.metadata.overlap_chars, None);
+        }
     }
 }

@@ -10,12 +10,10 @@ use crate::config::ChunkConfig;
 use crate::traits::ChunkAlgorithm;
 use std::sync::LazyLock;
 
-static CODE_FENCE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^(`{3,}|~{3,})(\w*)\s*$").unwrap()
-});
-static MD_HEADING_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap()
-});
+static CODE_FENCE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^(`{3,}|~{3,})(\w*)\s*$").unwrap());
+static MD_HEADING_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap());
 
 /// Represents a parsed markdown block.
 #[derive(Debug, Clone)]
@@ -173,8 +171,13 @@ impl ChunkAlgorithm for MarkdownChunker {
                     start,
                     end: _,
                 } => {
-                    // Flush current chunk before new section
-                    if !current_text.is_empty() {
+                    let heading_line =
+                        format!("{} {}\n", "#".repeat(level), content);
+
+                    // Only flush if adding this heading would overflow the current chunk
+                    if !current_text.is_empty()
+                        && current_text.len() + heading_line.len() > config.max_size
+                    {
                         let metadata = ChunkMetadata {
                             method: self.name().to_string(),
                             section: current_section.clone(),
@@ -191,18 +194,13 @@ impl ChunkAlgorithm for MarkdownChunker {
                         chunk_start_set = false;
                     }
 
-                    // Update current section
                     current_section = Some(format!("h{}: {}", level, content));
 
-                    // Add heading to next chunk
                     if !chunk_start_set {
                         current_start = start;
                         chunk_start_set = true;
                     }
-                    current_text.push_str(&"#".repeat(level));
-                    current_text.push(' ');
-                    current_text.push_str(&content);
-                    current_text.push('\n');
+                    current_text.push_str(&heading_line);
                 }
                 MarkdownBlock::CodeBlock {
                     content,
@@ -367,12 +365,14 @@ Content of second section.
         let chunks = chunker.chunk(text, &config);
 
         assert!(chunks.len() >= 2);
-        assert!(chunks[0]
-            .metadata
-            .section
-            .as_ref()
-            .unwrap()
-            .contains("First"));
+        assert!(
+            chunks[0]
+                .metadata
+                .section
+                .as_ref()
+                .unwrap()
+                .contains("First")
+        );
     }
 
     #[test]

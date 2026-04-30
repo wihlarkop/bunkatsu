@@ -45,7 +45,9 @@ impl ChunkAlgorithm for HybridChunker {
                 let mut resolved = false;
                 for strategy in strategies.iter().skip(1) {
                     let sub = Self::chunk_by_strategy(strategy, &chunk.text, config);
-                    if sub.iter().all(|c| c.text.len() <= config.max_size) || strategy == strategies.last().unwrap() {
+                    if sub.iter().all(|c| c.text.len() <= config.max_size)
+                        || strategy == strategies.last().unwrap()
+                    {
                         result.extend(sub);
                         resolved = true;
                         break;
@@ -99,10 +101,8 @@ mod tests {
     #[test]
     fn test_hybrid_custom_strategies() {
         let chunker = HybridChunker;
-        let config = ChunkConfig::new(50).with_hybrid_strategies(vec![
-            "sentence".to_string(),
-            "fixed_size".to_string(),
-        ]);
+        let config = ChunkConfig::new(50)
+            .with_hybrid_strategies(vec!["sentence".to_string(), "fixed_size".to_string()]);
         let text = "Hello world. How are you? I am fine today.";
         let chunks = chunker.chunk(text, &config);
         assert!(!chunks.is_empty());

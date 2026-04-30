@@ -62,6 +62,12 @@ class CodeLanguage:
     Rust: CodeLanguage
     Go: CodeLanguage
     Java: CodeLanguage
+    C: CodeLanguage
+    Cpp: CodeLanguage
+    CSharp: CodeLanguage
+    PHP: CodeLanguage
+    Ruby: CodeLanguage
+    Swift: CodeLanguage
     Generic: CodeLanguage
 
 
@@ -80,22 +86,32 @@ class Chunker:
         self,
         text: str,
         max_size: int = 512,
+        overlap: int = 0,
         detector: SentenceDetector = ...,
     ) -> list[Chunk]: ...
 
-    def chunk_paragraphs(self, text: str, max_size: int = 512) -> list[Chunk]: ...
+    def chunk_paragraphs(
+        self, text: str, max_size: int = 512, overlap: int = 0
+    ) -> list[Chunk]: ...
 
     def chunk_markdown(self, text: str, max_size: int = 1000) -> list[Chunk]: ...
 
-    def chunk_headings(self, text: str, max_size: int = 1000) -> list[Chunk]: ...
+    def chunk_headings(
+        self,
+        text: str,
+        max_size: int = 1000,
+        levels: list[int] | None = None,
+    ) -> list[Chunk]: ...
 
-    def chunk_recursive(self, text: str, max_size: int = 512) -> list[Chunk]: ...
+    def chunk_recursive(
+        self, text: str, max_size: int = 512, overlap: int = 0
+    ) -> list[Chunk]: ...
 
     def chunk_tokens(
         self,
         text: str,
-        tokenizer_fn: Callable[[str], int],
         max_tokens: int = 512,
+        tokenizer_fn: Callable[[str], int] | None = None,
     ) -> list[Chunk]: ...
 
     def chunk_html(self, text: str, max_size: int = 1000) -> list[Chunk]: ...
@@ -115,7 +131,12 @@ class Chunker:
 
     def chunk_hierarchical(self, text: str, max_size: int = 512) -> list[Chunk]: ...
 
-    def chunk_hybrid(self, text: str, max_size: int = 512) -> list[Chunk]: ...
+    def chunk_hybrid(
+        self,
+        text: str,
+        max_size: int = 512,
+        strategies: list[str] | None = None,
+    ) -> list[Chunk]: ...
 
     # --- Embedding-based algorithms ---
 
@@ -149,7 +170,11 @@ class Chunker:
     # --- Dynamic dispatch ---
 
     def chunk_by_name(
-        self, text: str, method: str, max_size: int = 512
-    ) -> list[Chunk]: ...
+        self, text: str, method: str, max_size: int = 512, overlap: int = 0
+    ) -> list[Chunk]:
+        """Raises ValueError if method is not found."""
+        ...
+
+    def available_methods(self) -> list[str]: ...
 
     def available_methods(self) -> list[str]: ...

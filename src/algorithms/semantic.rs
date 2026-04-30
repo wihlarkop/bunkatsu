@@ -65,7 +65,11 @@ impl SemanticChunker {
             if group.is_empty() {
                 return None;
             }
-            let text = group.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            let text = group
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             let start = group[0].start;
             let end = group[group.len() - 1].end;
             Some(Chunk::with_uuid(
@@ -125,10 +129,13 @@ mod tests {
     struct MockEmbedder;
     impl EmbeddingProvider for MockEmbedder {
         fn embed<'py>(&self, _py: Python<'py>, texts: &[&str]) -> Result<Vec<Vec<f32>>, String> {
-            Ok(texts.iter().map(|t| {
-                let v = t.chars().next().map(|c| c as u8 as f32).unwrap_or(0.0);
-                vec![v / 128.0, 1.0 - v / 128.0, 0.5]
-            }).collect())
+            Ok(texts
+                .iter()
+                .map(|t| {
+                    let v = t.chars().next().map(|c| c as u8 as f32).unwrap_or(0.0);
+                    vec![v / 128.0, 1.0 - v / 128.0, 0.5]
+                })
+                .collect())
         }
     }
 

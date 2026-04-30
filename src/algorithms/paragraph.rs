@@ -14,76 +14,102 @@ impl ChunkAlgorithm for ParagraphChunker {
         }
 
         let mut chunks = Vec::new();
+        // (start_byte, owned_text) for each paragraph in the current window
+        let mut current_paras: Vec<(usize, String)> = Vec::new();
         let mut current_text = String::new();
-        let mut current_start = 0;
-        let mut byte_offset = 0;
-        let mut chunk_start_set = false;
+        let mut current_start = 0usize;
+        // How many chars at the start of current_text are carry-over overlap
+        let mut window_overlap: Option<usize> = None;
+        let mut byte_offset = 0usize;
 
-        // Split on double newlines (paragraph boundaries)
         for part in text.split("\n\n") {
             let trimmed = part.trim();
             if trimmed.is_empty() {
-                byte_offset += part.len() + 2; // +2 for the \n\n
+                byte_offset += part.len() + 2;
                 continue;
             }
 
             let para_start = byte_offset + part.find(trimmed).unwrap_or(0);
 
-            // Check if adding this paragraph would exceed max_size
             let potential_len = if current_text.is_empty() {
                 trimmed.len()
             } else {
-                current_text.len() + 2 + trimmed.len() // +2 for paragraph separator
+                current_text.len() + 2 + trimmed.len()
             };
 
             if potential_len > config.max_size && !current_text.is_empty() {
-                // Flush current chunk
-                let metadata = ChunkMetadata {
-                    method: self.name().to_string(),
-                    section: None,
-                    overlap_chars: None,
-                    parent_chunk_id: None,
-                };
+                // Flush
                 chunks.push(Chunk::with_uuid(
                     current_text.clone(),
                     current_start,
                     current_start + current_text.len(),
-                    metadata,
+                    ChunkMetadata {
+                        method: self.name().to_string(),
+                        section: None,
+                        overlap_chars: window_overlap,
+                        parent_chunk_id: None,
+                    },
                 ));
 
-                // Start new chunk
-                current_text = trimmed.to_string();
-                current_start = para_start;
-                chunk_start_set = true;
-            } else {
-                if !chunk_start_set {
-                    current_start = para_start;
-                    chunk_start_set = true;
-                }
-                if current_text.is_empty() {
-                    current_text = trimmed.to_string();
+                // Carry overlap tail into next window
+                if config.overlap > 0 {
+                    let mut tail_len = 0usize;
+                    let mut tail_start = current_paras.len();
+                    for (i, (_, p)) in current_paras.iter().enumerate().rev() {
+                        let cost = if tail_len == 0 { p.len() } else { p.len() + 2 };
+                        if tail_len + cost > config.overlap {
+                            break;
+                        }
+                        tail_len += cost;
+                        tail_start = i;
+                    }
+                    let tail = &current_paras[tail_start..];
+                    if !tail.is_empty() {
+                        let carried = tail
+                            .iter()
+                            .map(|(_, p)| p.as_str())
+                            .collect::<Vec<_>>()
+                            .join("\n\n");
+                        let carried_len = carried.len();
+                        current_start = tail[0].0;
+                        current_text = carried;
+                        current_paras = tail.to_vec();
+                        window_overlap = Some(carried_len);
+                    } else {
+                        current_text.clear();
+                        current_paras.clear();
+                        window_overlap = None;
+                    }
                 } else {
-                    current_text.push_str("\n\n");
-                    current_text.push_str(trimmed);
+                    current_text.clear();
+                    current_paras.clear();
+                    window_overlap = None;
                 }
             }
 
-            byte_offset += part.len() + 2; // +2 for the \n\n separator
+            if current_text.is_empty() {
+                current_start = para_start;
+                current_text = trimmed.to_string();
+            } else {
+                current_text.push_str("\n\n");
+                current_text.push_str(trimmed);
+            }
+            current_paras.push((para_start, trimmed.to_string()));
+
+            byte_offset += part.len() + 2;
         }
 
-        // Flush remaining text
         if !current_text.is_empty() {
-            let metadata = ChunkMetadata {
-                method: self.name().to_string(),
-                section: None,
-                overlap_chars: None,
-                parent_chunk_id: None,
-            };
             chunks.push(Chunk::with_uuid(
                 current_text.clone(),
                 current_start,
                 current_start + current_text.len(),
-                metadata,
+                ChunkMetadata {
+                    method: self.name().to_string(),
+                    section: None,
+                    overlap_chars: window_overlap,
+                    parent_chunk_id: None,
+                },
             ));
         }
 

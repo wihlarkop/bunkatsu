@@ -23,13 +23,11 @@ impl ChunkAlgorithm for SlidingWindowChunker {
         let mut chunks = Vec::new();
         let chars: Vec<char> = text.chars().collect();
         let mut start_char_idx = 0;
+        let mut start_byte = 0usize;
 
         while start_char_idx < chars.len() {
             let end_char_idx = (start_char_idx + config.max_size).min(chars.len());
             let chunk_text: String = chars[start_char_idx..end_char_idx].iter().collect();
-
-            // Calculate byte positions
-            let start_byte = chars[..start_char_idx].iter().map(|c| c.len_utf8()).sum();
             let end_byte = start_byte + chunk_text.len();
 
             // Calculate actual overlap for this chunk
@@ -48,10 +46,15 @@ impl ChunkAlgorithm for SlidingWindowChunker {
 
             chunks.push(Chunk::with_uuid(chunk_text, start_byte, end_byte, metadata));
 
-            // Move to next position
             if end_char_idx >= chars.len() {
                 break;
             }
+            // Advance start_byte by exactly `step` characters worth of bytes
+            let step_bytes: usize = chars[start_char_idx..start_char_idx + step]
+                .iter()
+                .map(|c| c.len_utf8())
+                .sum();
+            start_byte += step_bytes;
             start_char_idx += step;
         }
 

@@ -16,13 +16,11 @@ impl ChunkAlgorithm for FixedSizeChunker {
         let mut chunks = Vec::new();
         let chars: Vec<char> = text.chars().collect();
         let mut start_char_idx = 0;
+        let mut start_byte = 0usize;
 
         while start_char_idx < chars.len() {
             let end_char_idx = (start_char_idx + config.max_size).min(chars.len());
             let chunk_text: String = chars[start_char_idx..end_char_idx].iter().collect();
-
-            // Calculate byte positions for start/end
-            let start_byte = chars[..start_char_idx].iter().map(|c| c.len_utf8()).sum();
             let end_byte = start_byte + chunk_text.len();
 
             let metadata = ChunkMetadata {
@@ -34,6 +32,7 @@ impl ChunkAlgorithm for FixedSizeChunker {
 
             chunks.push(Chunk::with_uuid(chunk_text, start_byte, end_byte, metadata));
 
+            start_byte = end_byte;
             start_char_idx = end_char_idx;
         }
 

@@ -1,127 +1,124 @@
 # Bunkatsu (分割)
 
-Universal High-Performance Text Chunking Library
-
-A Rust-core, Python-first text chunking library designed for RAG, NLP, and Document AI systems.
-
-## Features
-
-- **High performance** — Rust core with PyO3 bindings
-- **Python-first API** — Clean, intuitive interface
-- **19 chunking algorithms** — From fixed-size to semantic/LLM-based
-- **Embedding/LLM callbacks** — Bring your own embedder or LLM
-- **Dynamic dispatch** — `chunk_by_name()` for runtime algorithm selection
-
-## Supported Algorithms
-
-### Basic Chunking (v0.1) ✅
-| Method | Function | Description |
-|--------|----------|-------------|
-| Fixed Size | `chunk_fixed()` | Split by character count |
-| Sliding Window | `chunk_sliding()` | Overlapping chunks |
-| Sentence | `chunk_sentences()` | Split at sentence boundaries |
-| Paragraph | `chunk_paragraphs()` | Split at paragraph boundaries |
-
-### Structural Chunking (v0.2) ✅
-| Method | Function | Description |
-|--------|----------|-------------|
-| Markdown | `chunk_markdown()` | Preserve code blocks, split at headings |
-| Heading | `chunk_headings()` | Split by heading levels (#, ##, ###) |
-| Recursive | `chunk_recursive()` | Multi-level: paragraph → sentence → fixed |
-
-### Advanced Pure-Rust Chunking (v0.3) ✅
-| Method | Function | Description |
-|--------|----------|-------------|
-| Token | `chunk_tokens()` | Split by token count with Python callback |
-| HTML | `chunk_html()` | Split at block-level HTML tags, strip markup |
-| JSON | `chunk_json()` | Split JSON arrays/objects by size |
-| CSV | `chunk_csv()` | N rows per chunk, preserve header |
-| LaTeX | `chunk_latex()` | Split at `\section`, `\subsection`, etc. |
-| Code | `chunk_code()` | Split at function/class boundaries per language |
-| Hierarchical | `chunk_hierarchical()` | Paragraph parents + sentence children |
-| Hybrid | `chunk_hybrid()` | Cascade strategies with oversized fallback |
-
-### Embedding & LLM-Based Chunking (v0.3) ✅
-| Method | Function | Description |
-|--------|----------|-------------|
-| Semantic | `chunk_semantic()` | Split where cosine similarity drops below threshold |
-| Kamradt | `chunk_kamradt()` | Split at Nth percentile distance between embeddings |
-| Proposition | `chunk_proposition()` | LLM decomposes sentences into atomic claims |
-| Late Chunking | `chunk_late()` | Fixed chunks with pooled token-level embeddings |
-
-## Installation
+Rust-core text chunking library for Python — 3–98× faster than pure-Python chunkers, zero external dependencies for pure-text algorithms, 19 strategies in one API.
 
 ```bash
-# Development (requires maturin)
-maturin develop
-
-# Build wheel
-maturin build --release
+uv add bunkatsu
 ```
+
+**Algorithms you won't find elsewhere in one package:** CSV chunking with header preservation, LaTeX section splitting, Hierarchical chunks with parent–child IDs, and a bring-your-own embedder/LLM pattern for Semantic, Kamradt, Proposition, and Late Chunking.
 
 ## Quick Start
 
 ```python
-from bunkatsu import Chunker, CodeLanguage, SentenceDetector
+from bunkatsu import Chunker
 
 chunker = Chunker()
 
 # Fixed-size
-chunks = chunker.chunk_fixed("Your long text...", max_size=512)
+chunks = chunker.chunk_fixed("Your long document...", max_size=512)
 
-# Sliding window with overlap
-chunks = chunker.chunk_sliding("Your text...", max_size=512, overlap=64)
-
-# Sentence-based
+# Sentence-aware
 chunks = chunker.chunk_sentences("Hello world. How are you?", max_size=512)
 
-# Markdown-aware (preserves code blocks)
+# Markdown (preserves code blocks, splits at headings)
 chunks = chunker.chunk_markdown(markdown_text, max_size=1000)
 
-# Token-based with custom tokenizer
+# Token-based — bring your own tokenizer
 import tiktoken
 enc = tiktoken.get_encoding("cl100k_base")
-chunks = chunker.chunk_tokens(text, tokenizer_fn=lambda s: len(enc.encode(s)), max_tokens=512)
+chunks = chunker.chunk_tokens(text, max_tokens=512, tokenizer_fn=lambda s: len(enc.encode(s)))
 
-# Code-aware
-chunks = chunker.chunk_code(python_code, language=CodeLanguage.Python)
+# Code-aware (Python, Rust, JS, Go, …)
+chunks = chunker.chunk_code(source_code, max_size=512)
 
-# Hierarchical (parent paragraphs + child sentences)
+# CSV — N rows per chunk, header preserved in every chunk
+chunks = chunker.chunk_csv(csv_text, rows_per_chunk=50)
+
+# Hierarchical — paragraph parents + sentence children with linked IDs
 chunks = chunker.chunk_hierarchical(text, max_size=512)
+for chunk in chunks:
+    print(chunk.metadata.parent_chunk_id)  # links child → parent
 
-# Semantic (embedding-based)
-def embed(texts: list[str]) -> list[list[float]]:
-    # your embedder here
-    ...
-
+# Semantic — bring your own embedder
+def embed(texts: list[str]) -> list[list[float]]: ...
 chunks = chunker.chunk_semantic(text, embedding_fn=embed, threshold=0.5)
 
 # Kamradt percentile chunking
 chunks = chunker.chunk_kamradt(text, embedding_fn=embed, percentile=95.0)
 
-# Proposition chunking (LLM-based)
-def llm(prompt: str) -> str:
-    # your LLM here
-    ...
-
+# Proposition — LLM decomposes text into atomic claims
+def llm(prompt: str) -> str: ...
 chunks = chunker.chunk_proposition(text, llm_fn=llm)
 
-# Late chunking (fixed chunks + embeddings)
-from bunkatsu import EmbeddedChunk
-embedded: list[EmbeddedChunk] = chunker.chunk_late(text, embedding_fn=embed, max_size=512)
-for ec in embedded:
-    print(ec.chunk.text, ec.embedding[:3])
+# Dynamic dispatch by name
+chunks = chunker.chunk_by_name(text, "recursive", max_size=512)
+```
 
-# Dynamic dispatch
-chunks = chunker.chunk_by_name(text, "sentence", max_size=512)
+Every chunk carries position and metadata:
 
-# Each chunk has:
+```python
 for chunk in chunks:
-    print(chunk.id)        # Unique UUID
-    print(chunk.text)      # Chunk content
-    print(chunk.start)     # Start byte position in original text
-    print(chunk.end)       # End byte position
-    print(chunk.metadata)  # method, section, overlap_chars, parent_chunk_id
+    chunk.id        # UUID
+    chunk.text      # content
+    chunk.start     # byte offset in original text
+    chunk.end
+    chunk.metadata  # method, section, overlap_chars, parent_chunk_id
+```
+
+## Algorithms
+
+| Method | Function | Description |
+|--------|----------|-------------|
+| Fixed Size | `chunk_fixed(text, max_size)` | Split every N characters |
+| Sliding Window | `chunk_sliding(text, max_size, overlap)` | Overlapping windows |
+| Sentence | `chunk_sentences(text, max_size)` | Respect sentence boundaries |
+| Paragraph | `chunk_paragraphs(text, max_size)` | Respect paragraph boundaries |
+| Markdown | `chunk_markdown(text, max_size)` | Preserve code blocks, split at headings |
+| Heading | `chunk_headings(text, max_size)` | Split at `#`, `##`, `###` markers |
+| Recursive | `chunk_recursive(text, max_size)` | Cascade: paragraph → sentence → fixed |
+| Token | `chunk_tokens(text, max_tokens, tokenizer_fn)` | Split by token count (BYO tokenizer) |
+| HTML | `chunk_html(text, max_size)` | Split at block tags, strip markup |
+| JSON | `chunk_json(text, max_size)` | Split JSON arrays/objects by size |
+| CSV | `chunk_csv(text, rows_per_chunk)` | N rows per chunk, header preserved |
+| LaTeX | `chunk_latex(text, max_size)` | Split at `\section`, `\subsection`, etc. |
+| Code | `chunk_code(text, max_size)` | Split at function/class boundaries |
+| Hierarchical | `chunk_hierarchical(text, max_size)` | Paragraph parents + sentence children with IDs |
+| Hybrid | `chunk_hybrid(text, max_size)` | Cascade strategies with oversized fallback |
+| Semantic | `chunk_semantic(text, embedding_fn, threshold)` | Split where cosine similarity drops |
+| Kamradt | `chunk_kamradt(text, embedding_fn, percentile)` | Split at Nth percentile embedding distance |
+| Proposition | `chunk_proposition(text, llm_fn)` | LLM decomposes text into atomic claims |
+| Late Chunking | `chunk_late(text, embedding_fn, max_size)` | Fixed chunks with pooled embeddings |
+
+All pure-Rust algorithms are also available via `chunk_by_name(text, name, max_size)`.
+
+## Benchmark
+
+Tested against langchain-text-splitters, chonkie, and semantic-text-splitter on 250 KB of plain text. Averaged over 10 runs, Python 3.11, release build.
+
+| Algorithm | bunkatsu | Competitor | Speedup |
+|-----------|----------|------------|---------|
+| Fixed-size | 0.64 ms | langchain 2.1 ms | **3.2× faster** |
+| Sentence | 0.75 ms | chonkie 73 ms | **98× faster** |
+| Recursive | 2.1 ms | langchain 4.1 ms | **1.9× faster** |
+| Token (tiktoken) | 43 ms | chonkie 40 ms | ~1× (parity) |
+| Token (tiktoken) | 43 ms | semantic-text-splitter 122 ms | **2.9× faster** |
+| Markdown | 0.31 ms | langchain 0.54 ms | **1.7× faster** |
+| Code | 0.02 ms | langchain 0.63 ms | **26× faster** |
+| Code | 0.02 ms | semantic-text-splitter 8.1 ms | **338× faster** |
+| HTML | 0.15 ms | langchain 7.5 ms | **50× faster** |
+
+Token chunking is dominated by the tokenizer call (tiktoken), so bunkatsu and chonkie are at parity. Without an external tokenizer, bunkatsu's word-count mode runs at ~93 MB/s.
+
+## Installation
+
+```bash
+# From PyPI
+uv add bunkatsu
+
+# From source (requires Rust + maturin)
+uv tool install maturin
+maturin develop --release
 ```
 
 ## License

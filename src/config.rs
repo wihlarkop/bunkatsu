@@ -25,6 +25,12 @@ pub enum CodeLanguage {
     Rust,
     Go,
     Java,
+    C,
+    Cpp,
+    CSharp,
+    PHP,
+    Ruby,
+    Swift,
     Generic,
 }
 
@@ -61,19 +67,18 @@ impl Default for ChunkConfig {
             code_language: CodeLanguage::Auto,
             breakpoint_threshold: 0.5,
             percentile: 95.0,
-            heading_levels: vec![1, 2],
-            hybrid_strategies: vec![
-                "paragraph".into(),
-                "sentence".into(),
-                "fixed_size".into(),
-            ],
+            heading_levels: vec![],
+            hybrid_strategies: vec!["paragraph".into(), "sentence".into(), "fixed_size".into()],
         }
     }
 }
 
 impl ChunkConfig {
     pub fn new(max_size: usize) -> Self {
-        Self { max_size, ..Default::default() }
+        Self {
+            max_size,
+            ..Default::default()
+        }
     }
 
     pub fn with_overlap(mut self, overlap: usize) -> Self {

@@ -80,7 +80,11 @@ mod tests {
         assert!(!parents.is_empty());
         assert!(!children.is_empty());
         // Children have parent IDs
-        assert!(children.iter().all(|c| c.metadata.parent_chunk_id.is_some()));
+        assert!(
+            children
+                .iter()
+                .all(|c| c.metadata.parent_chunk_id.is_some())
+        );
     }
 
     #[test]

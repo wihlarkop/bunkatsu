@@ -3,23 +3,35 @@ use crate::config::{ChunkConfig, CodeLanguage};
 use crate::traits::ChunkAlgorithm;
 use std::sync::LazyLock;
 
-static PYTHON_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?m)^(def |class |async def )").unwrap()
-});
+static PYTHON_DEF_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?m)^(def |class |async def )").unwrap());
 static JS_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?m)^(function |class |const .+ = \(|const .+ = async \(|export (default )?(function|class))").unwrap()
 });
 static RUST_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?m)^(pub )?(fn |struct |enum |impl |trait |mod )").unwrap()
 });
-static GO_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?m)^func ").unwrap()
-});
+static GO_DEF_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?m)^func ").unwrap());
 static JAVA_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?m)^(\s*)(public|private|protected|static|void|class|interface) ").unwrap()
 });
-static GENERIC_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?m)^\s*\n").unwrap()
+static GENERIC_DEF_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?m)^\s*\n").unwrap());
+static C_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?m)^(\w[\w\s\*]+)\s+\w+\s*\([^)]*\)\s*\{").unwrap()
+});
+static CSHARP_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?m)^(\s*)(public|private|protected|internal|static|override|virtual|abstract|sealed|class|interface|struct|enum|namespace)\s").unwrap()
+});
+static PHP_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?m)^(\s*)(function |class |interface |trait |abstract class )").unwrap()
+});
+static RUBY_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?m)^(\s*)(def |class |module |attr_)").unwrap()
+});
+static SWIFT_DEF_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"(?m)^(\s*)(func |class |struct |enum |protocol |extension |var |let )").unwrap()
 });
 
 pub struct CodeChunker;
@@ -32,6 +44,11 @@ impl CodeChunker {
             CodeLanguage::Rust => &RUST_DEF_RE,
             CodeLanguage::Go => &GO_DEF_RE,
             CodeLanguage::Java => &JAVA_DEF_RE,
+            CodeLanguage::C | CodeLanguage::Cpp => &C_DEF_RE,
+            CodeLanguage::CSharp => &CSHARP_DEF_RE,
+            CodeLanguage::PHP => &PHP_DEF_RE,
+            CodeLanguage::Ruby => &RUBY_DEF_RE,
+            CodeLanguage::Swift => &SWIFT_DEF_RE,
             CodeLanguage::Generic | CodeLanguage::Auto => &GENERIC_DEF_RE,
         }
     }
@@ -159,7 +176,7 @@ mod tests {
         let config = ChunkConfig::new(1000);
         let code = "pub fn hello() {\n    println!(\"hi\");\n}\n\npub fn world() {}\n";
         let chunks = chunker.chunk(code, &config);
-        assert!(chunks.len() >= 1);
+        assert!(!chunks.is_empty());
         assert_eq!(chunks[0].metadata.method, "code");
     }
 }

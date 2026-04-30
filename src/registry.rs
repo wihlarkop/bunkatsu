@@ -22,7 +22,9 @@ impl Default for AlgorithmRegistry {
 
 impl AlgorithmRegistry {
     pub fn new() -> Self {
-        let mut registry = Self { algorithms: HashMap::new() };
+        let mut registry = Self {
+            algorithms: HashMap::new(),
+        };
 
         registry.register(Arc::new(FixedSizeChunker));
         registry.register(Arc::new(SlidingWindowChunker));
@@ -44,7 +46,8 @@ impl AlgorithmRegistry {
     }
 
     pub fn register(&mut self, algorithm: Arc<dyn ChunkAlgorithm>) {
-        self.algorithms.insert(algorithm.name().to_string(), algorithm);
+        self.algorithms
+            .insert(algorithm.name().to_string(), algorithm);
     }
 
     pub fn get(&self, name: &str) -> Option<Arc<dyn ChunkAlgorithm>> {

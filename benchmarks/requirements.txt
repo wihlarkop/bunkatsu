@@ -1,0 +1,5 @@
+langchain-text-splitters>=0.3
+chonkie[tokenizers]>=1.0
+semantic-text-splitter>=0.17
+semchunk>=2.2
+tiktoken>=0.7

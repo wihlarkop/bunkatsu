@@ -12,7 +12,9 @@ pub struct KamradtChunker {
 
 impl KamradtChunker {
     pub fn new(percentile: f32) -> Self {
-        Self { percentile: percentile.clamp(0.0, 100.0) }
+        Self {
+            percentile: percentile.clamp(0.0, 100.0),
+        }
     }
 
     pub fn chunk_with_embedder<'py>(
@@ -50,30 +52,48 @@ impl KamradtChunker {
         for (i, &dist) in distances.iter().enumerate() {
             if dist >= threshold {
                 let group = &sentences[group_start..=i];
-                let text = group.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+                let text = group
+                    .iter()
+                    .map(|s| s.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 let start = group[0].start;
                 let end = group[group.len() - 1].end;
-                chunks.push(Chunk::with_uuid(text, start, end, ChunkMetadata {
-                    method: "kamradt".to_string(),
-                    section: None,
-                    overlap_chars: None,
-                    parent_chunk_id: None,
-                }));
+                chunks.push(Chunk::with_uuid(
+                    text,
+                    start,
+                    end,
+                    ChunkMetadata {
+                        method: "kamradt".to_string(),
+                        section: None,
+                        overlap_chars: None,
+                        parent_chunk_id: None,
+                    },
+                ));
                 group_start = i + 1;
             }
         }
 
         if group_start < sentences.len() {
             let group = &sentences[group_start..];
-            let text = group.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            let text = group
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             let start = group[0].start;
             let end = group[group.len() - 1].end;
-            chunks.push(Chunk::with_uuid(text, start, end, ChunkMetadata {
-                method: "kamradt".to_string(),
-                section: None,
-                overlap_chars: None,
-                parent_chunk_id: None,
-            }));
+            chunks.push(Chunk::with_uuid(
+                text,
+                start,
+                end,
+                ChunkMetadata {
+                    method: "kamradt".to_string(),
+                    section: None,
+                    overlap_chars: None,
+                    parent_chunk_id: None,
+                },
+            ));
         }
 
         chunks
@@ -107,9 +127,17 @@ mod tests {
     struct MockEmbedder;
     impl EmbeddingProvider for MockEmbedder {
         fn embed<'py>(&self, _py: Python<'py>, texts: &[&str]) -> Result<Vec<Vec<f32>>, String> {
-            Ok(texts.iter().enumerate().map(|(i, _)| {
-                if i % 2 == 0 { vec![1.0, 0.0] } else { vec![0.0, 1.0] }
-            }).collect())
+            Ok(texts
+                .iter()
+                .enumerate()
+                .map(|(i, _)| {
+                    if i % 2 == 0 {
+                        vec![1.0, 0.0]
+                    } else {
+                        vec![0.0, 1.0]
+                    }
+                })
+                .collect())
         }
     }
 

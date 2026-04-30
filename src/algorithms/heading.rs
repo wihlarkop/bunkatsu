@@ -7,9 +7,8 @@ use crate::config::ChunkConfig;
 use crate::traits::ChunkAlgorithm;
 use std::sync::LazyLock;
 
-static HEADING_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap()
-});
+static HEADING_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^(#{1,6})\s+(.+)$").unwrap());
 
 /// A parsed heading with its content.
 #[derive(Debug)]
@@ -116,12 +115,21 @@ impl HeadingChunker {
 }
 
 impl ChunkAlgorithm for HeadingChunker {
-    fn chunk(&self, text: &str, _config: &ChunkConfig) -> Vec<Chunk> {
+    fn chunk(&self, text: &str, config: &ChunkConfig) -> Vec<Chunk> {
         if text.is_empty() {
             return Vec::new();
         }
 
-        let sections = self.parse_sections(text);
+        // Use config heading_levels if non-empty, else fall back to struct field
+        let active_levels: &[usize] = if !config.heading_levels.is_empty() {
+            &config.heading_levels
+        } else {
+            &self.levels
+        };
+        let effective_chunker = HeadingChunker {
+            levels: active_levels.to_vec(),
+        };
+        let sections = effective_chunker.parse_sections(text);
         let mut chunks = Vec::new();
 
         for section in sections {

@@ -76,8 +76,7 @@ impl ChunkAlgorithm for JsonChunker {
                     let pair_size = pair_str.len() + 2;
 
                     if !current_pairs.is_empty() && current_size + pair_size > config.max_size {
-                        let chunk_text =
-                            serde_json::to_string(&current_pairs).unwrap_or_default();
+                        let chunk_text = serde_json::to_string(&current_pairs).unwrap_or_default();
                         let start = text.find(&chunk_text).unwrap_or(0);
                         chunks.push(Chunk::with_uuid(
                             chunk_text.clone(),

@@ -44,6 +44,61 @@ impl TokenChunker {
                 current_start = sentence.start;
             }
 
+            // Word-level fallback: sentence itself exceeds budget
+            if sentence_tokens > max_tokens {
+                let mut word_text = String::new();
+                let mut word_tokens = 0usize;
+                let mut word_start = sentence.start;
+                let mut byte_pos = sentence.start;
+                for word in sentence.text.split_whitespace() {
+                    let wt = tokenizer(word);
+                    if !word_text.is_empty() && word_tokens + wt > max_tokens {
+                        let end = word_start + word_text.len();
+                        chunks.push(Chunk::with_uuid(
+                            word_text.clone(),
+                            word_start,
+                            end,
+                            ChunkMetadata {
+                                method: "token".to_string(),
+                                section: None,
+                                overlap_chars: None,
+                                parent_chunk_id: None,
+                            },
+                        ));
+                        word_start = byte_pos;
+                        word_text = word.to_string();
+                        word_tokens = wt;
+                    } else {
+                        if word_text.is_empty() {
+                            word_start = byte_pos;
+                            word_text = word.to_string();
+                        } else {
+                            word_text.push(' ');
+                            word_text.push_str(word);
+                        }
+                        word_tokens += wt;
+                    }
+                    byte_pos += word.len() + 1;
+                }
+                if !word_text.is_empty() {
+                    let end = word_start + word_text.len();
+                    chunks.push(Chunk::with_uuid(
+                        word_text,
+                        word_start,
+                        end,
+                        ChunkMetadata {
+                            method: "token".to_string(),
+                            section: None,
+                            overlap_chars: None,
+                            parent_chunk_id: None,
+                        },
+                    ));
+                }
+                current_text.clear();
+                current_tokens = 0;
+                continue;
+            }
+
             if current_text.is_empty() {
                 current_start = sentence.start;
                 current_text = sentence.text.clone();
@@ -94,11 +149,8 @@ mod tests {
     #[test]
     fn test_token_basic() {
         let chunker = TokenChunker;
-        let chunks = chunker.chunk_with_tokenizer(
-            "Hello world. How are you? I am fine.",
-            3,
-            word_count,
-        );
+        let chunks =
+            chunker.chunk_with_tokenizer("Hello world. How are you? I am fine.", 3, word_count);
         assert!(chunks.len() >= 2);
     }
 

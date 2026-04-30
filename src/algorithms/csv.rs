@@ -35,7 +35,8 @@ impl ChunkAlgorithm for CsvChunker {
 
             if current_rows.len() >= rows_per_chunk {
                 let chunk_text = format!("{}\n{}", header, current_rows.join("\n"));
-                let start = line_start.saturating_sub(current_rows.iter().map(|r| r.len() + 1).sum::<usize>());
+                let start = line_start
+                    .saturating_sub(current_rows.iter().map(|r| r.len() + 1).sum::<usize>());
                 chunks.push(Chunk::with_uuid(
                     chunk_text.clone(),
                     start,

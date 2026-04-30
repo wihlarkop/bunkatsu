@@ -1,7 +1,7 @@
 //! Error types for Bunkatsu chunking library.
 
-use pyo3::exceptions::PyValueError;
 use pyo3::PyErr;
+use pyo3::exceptions::PyValueError;
 use thiserror::Error;
 
 /// Errors that can occur during chunking operations.

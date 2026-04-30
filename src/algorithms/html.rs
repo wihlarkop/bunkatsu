@@ -9,9 +9,8 @@ static BLOCK_TAG_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     ).unwrap()
 });
 
-static HTML_TAG_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"<[^>]+>").unwrap()
-});
+static HTML_TAG_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"<[^>]+>").unwrap());
 
 pub struct HtmlChunker;
 
